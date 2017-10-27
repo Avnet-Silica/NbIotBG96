@@ -45,35 +45,44 @@ BG96::BG96(PinName tx, PinName rx, PinName reset, PinName wakeup, bool debug)
 
 bool BG96::startup(int mode)
 {
-    _parser.setTimeout(BG96_MISC_TIMEOUT);
+	  Timer timer;
+		uint32_t time;
+    _parser.setTimeout(BG96_MISC_TIMEOUT);    
     /*Test module before reset*/
     waitBG96Ready();
-    wait_ms(10000);
-    _parser.send("ATE0");
-    while (1) {
-        if (_parser.recv("OK"))
-            break;
-    }
-
-    _parser.send("AT+QIACT=1\r");
-    while (1) {
-        if (_parser.recv("OK"))
-            break;
-    }
-
-	#if 0
-    _parser.send("AT+QIACT?\r");
-    while (1) {
-        if (_parser.recv("OK"))
-            break;
-    }
-    #endif
-
+		wait(2.0);
+		_parser.send("ATE0");
+			while (1){
+				if (_parser.recv("OK"))
+						break;
+				}	
+		wait(10.0);
+		_parser.send("AT+QIACT=1");
+		timer.start();
+			while (1){
+				if (_parser.recv("OK"))
+						break;
+				time = timer.read_ms();
+				if (time > BG96_CONNECT_TIMEOUT) 
+					{
+						return false;		
+					}
+									
+				}		
+		#if 0								
+		_parser.send("AT+QIACT?");
+			while (1){
+				if (_parser.recv("OK"))
+						break;
+			}									
+		#endif
+		
     /*Reset module*/
-    _parser.flush();
+	_parser.flush();            
     //reset();
+    
+	return true;    
 
-    return true;
 }
 
 bool BG96::hw_reset(void)
