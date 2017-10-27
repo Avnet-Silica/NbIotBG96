@@ -59,7 +59,6 @@ bool BG96::startup(int mode)
     while (1) {
         if (_parser.recv("OK"))
             break;
-        return false;
     }
 
 	#if 0
