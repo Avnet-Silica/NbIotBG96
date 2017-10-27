@@ -98,11 +98,15 @@ BG96Interface::~BG96Interface()
 */
 int BG96Interface::init(void) 
 {
-    if(_BG96.startup(0)) {
-        isInitialized=true;
-        return true;
-    }
-    else return NSAPI_ERROR_DEVICE_ERROR;
+		while(1)
+		{
+			if(_BG96.startup(0)) 
+			{
+					isInitialized=true;
+					return true;
+			}
+		}
+    //else return NSAPI_ERROR_DEVICE_ERROR;
 }
 
 /**
