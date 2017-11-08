@@ -385,14 +385,15 @@ bool BG96::open(const char *type, int* id, const char* addr, int port)
 bool BG96::send(int id, const void *data, uint32_t amount)
 {
     char _buf[32];
-		char	result_string[64];
-		uint32_t ping_w_time;
+	
     _parser.setTimeout(BG96_SEND_TIMEOUT);
 		uint8_t* dt = (uint8_t*)data;
 
 		//pclog.printf("Sending %d len ...", amount);
 	
 		#if DBG_MSG
+		char	result_string[64];
+		uint8_t* dt = (uint8_t*)data;
 		//these tests and print is only for debug purposes
 		if (amount == 2)
 		{
