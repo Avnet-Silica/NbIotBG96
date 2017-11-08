@@ -64,6 +64,7 @@ public:
     
     //Implementation of NetworkStack
     virtual     const char *get_ip_address();
+    int         init(void);														
     
 protected:
     //Implementation of NetworkStack
@@ -80,10 +81,9 @@ protected:
     virtual     void socket_attach(void *handle, void (*callback)(void *), void *data);
     virtual     int setsockopt(void *handle, int level, int optname, const void *optval, unsigned optlen);    
     virtual     int getsockopt(void *handle, int level, int optname, void *optval, unsigned *optlen);    
-           
+				
 private:
-    int         init(void);
-        
+       
     BG96 _BG96;
     bool _ids[BG96SA_SOCKET_COUNT];
     bool isListening;
@@ -92,4 +92,5 @@ private:
 
 
 #endif
+
 

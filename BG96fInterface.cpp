@@ -66,7 +66,7 @@ struct BG96_socket {
 * @retval none
 */
 BG96Interface::BG96Interface(PinName tx, PinName rx, bool debug)     
-    : _BG96(tx, rx, PC_12, PC_8, debug)
+    : _BG96(tx, rx, PA_7, PB_6, debug)
 {
     memset(_ids, 0, sizeof(_ids));
     isInitialized = false;
@@ -129,26 +129,6 @@ int BG96Interface::connect(const char *apn,
         if(!init())
             return NSAPI_ERROR_DEVICE_ERROR;
     }
-		
-#if 0 
-    switch(security)
-    {
-        case NSAPI_SECURITY_NONE:
-            mode = 0;
-            pass_phrase = NULL;
-            break;
-        case NSAPI_SECURITY_WEP:
-            mode = 1;
-            break;
-        case NSAPI_SECURITY_WPA:
-        case NSAPI_SECURITY_WPA2:
-            mode = 2;
-            break;
-        default:
-            mode = 2;
-            break;
-    }
-		#endif
 		
     return (_BG96.connect((char*)apn, (char*)username, (char*)password));
 

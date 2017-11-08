@@ -16,6 +16,7 @@
  
 #ifndef BG96_H
 #define BG96_H
+
  
 #include "ATParser.h"
  
@@ -130,7 +131,6 @@ public:
     * @return true only if socket is closed successfully
     */
     bool close(int id);
- 
  
     /**
     * Checks if data is available
