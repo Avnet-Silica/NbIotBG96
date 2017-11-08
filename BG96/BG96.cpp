@@ -387,7 +387,6 @@ bool BG96::send(int id, const void *data, uint32_t amount)
     char _buf[32];
 	
     _parser.setTimeout(BG96_SEND_TIMEOUT);
-		uint8_t* dt = (uint8_t*)data;
 
 		//pclog.printf("Sending %d len ...", amount);
 	
