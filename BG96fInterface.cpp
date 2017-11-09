@@ -121,7 +121,6 @@ int BG96Interface::connect(const char *apn,
                              const char *username, 
                              const char *password)
 {    
-    int mode;
   
     //initialize the device before connecting
     if(!isInitialized)
