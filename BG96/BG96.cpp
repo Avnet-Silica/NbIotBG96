@@ -28,7 +28,7 @@ const uint8_t DEVICE_ID[6] = {0x00,0x0b,0x57,0x55,0xdb,0x45};
 #define BG96_SEND_TIMEOUT       500
 #define BG96_RECV_TIMEOUT       500 //some commands like AT&F/W takes some time to get the result back!
 #define BG96_MISC_TIMEOUT       1000
-#define BG96_SOCKQ_TIMEOUT      3000
+#define BG96_SOCKQ_TIMEOUT      8000
 
 extern  Serial pc;			//(SERIAL_TX, SERIAL_RX); 
 
@@ -196,6 +196,7 @@ bool BG96::connect(const char *apn, const char *username, const char *password)
 {
 			int i = 0;
 			char* search_pt;
+			memset(pdp_string, 0, sizeof(pdp_string));
 			pc.printf("Checking APN ...\r\n");
 			_parser.send("AT+QICSGP=1");
 	    while(1){
@@ -203,7 +204,7 @@ bool BG96::connect(const char *apn, const char *username, const char *password)
 						_parser.read(&pdp_string[i], 1);
 						i++;
 						//if OK rx, end string; if not, program stops
-            search_pt = strstr(pdp_string, "OK");
+            search_pt = strstr(pdp_string, "OK\r\n");
 						if (search_pt != 0)
 						{
 								break;
@@ -211,10 +212,12 @@ bool BG96::connect(const char *apn, const char *username, const char *password)
 						//TODO: add timeout if no aswer from module!!
     }
 		
-		//comapre APN name, if match, no store is needed
+		//compare APN name, if match, no store is needed
 		search_pt = strstr(pdp_string, apn);
 		if (search_pt == 0)
 		{
+			//few delay to purge serial ...
+			delay_ms(2);
 			pc.printf("Storing APN %s ...\r\n", apn);
 			//program APN and connection parameter only for PDP context 1, authentication NONE
 			//TODO: add program for other context
@@ -334,7 +337,7 @@ bool BG96::open(const char *type, int* id, const char* addr, int port)
 						sock_id = 0;
             break;
     };
-    //_parser.setTimeout(BG96_SOCKQ_TIMEOUT*3);
+    _parser.setTimeout(BG96_SOCKQ_TIMEOUT);
 
 		//open socket for context 1
     while(1) {
@@ -349,7 +352,7 @@ bool BG96::open(const char *type, int* id, const char* addr, int port)
                 res = _parser.recv("+QIOPEN: %d,%d", id, &result);
                 if (res == true) 
 									{
-                    pc.printf("Open socket result = %d\r\n", result);
+                    pc.printf("Open socket type %s #%d result = %d\r\n", send_type_pt, *id, result);
                     if (result == 0)
 										{	
 												//wait for socket open result ... start RECV timeout timer
@@ -381,17 +384,31 @@ bool BG96::open(const char *type, int* id, const char* addr, int port)
     }
 
 }
+uint8_t err_counter = 0;
 
 bool BG96::send(int id, const void *data, uint32_t amount)
 {
     char _buf[32];
-	
+
+		char	result_string[100];
+		char* search_pt;
     _parser.setTimeout(BG96_SEND_TIMEOUT);
 
 		//pclog.printf("Sending %d len ...", amount);
 	
+		//check if previous sent is good, otherwise after 5 consecutive fails close socket and error!!
+		if (err_counter > 5)
+		{
+				pc.printf("Closing socket #%d\r\n", id);
+				close(id);
+				socket_closed = 1;
+				err_counter = 0;
+				return false;
+		}		
+	
 		#if DBG_MSG
-		char	result_string[64];
+
+
 		uint8_t* dt = (uint8_t*)data;
 		//these tests and print is only for debug purposes
 		if (amount == 2)
@@ -407,8 +424,12 @@ bool BG96::send(int id, const void *data, uint32_t amount)
             break;
             }
 		}
-		
+
+		#endif
+
 		_parser.send("AT+QISEND=%d,0", id);
+		#if 0
+				err_counter = 0;
 				while(1)
 				{
 					if( _parser.recv("+QISEND: %s", &result_string[0])
@@ -417,8 +438,39 @@ bool BG96::send(int id, const void *data, uint32_t amount)
 							break;
 						}	
 				}
+		#else
+			
+		int i = 0;
+		memset(result_string, 0, sizeof(result_string));
+		const char OK_str[] = {"OK\r\n"};
+		const char OK0_str[] = {",0"};
+		while(1){
+						//read and store answer
+						_parser.read(&result_string[i], 1);
+						i++;
+						//if OK rx, end string; if not, program stops
+            search_pt = strstr(result_string, OK_str);
+						if (search_pt != 0)
+						{
+								break;
+						}
+						//TODO: add timeout if no aswer from module!!
+    }
+		
+		//if send fails, the string doesn't have ",0" sequence, then 
+		search_pt = strstr(result_string, OK0_str);		
+		if (search_pt == 0)
+		{
+				err_counter++;
+		}
+		else
+		{
+				err_counter = 0;
+		}
+		
 		#endif
-				
+
+		
 		//here send data to socket ...
     sprintf((char*)_buf,"AT+QISEND=%d,%d\r", id, amount);
 
@@ -458,6 +510,7 @@ bool BG96::send(int id, const void *data, uint32_t amount)
             }
     }
 		#endif
+		
 	  pc.printf("Closing socket #%d\r\n", id);
 		close(id);
 		socket_closed = 1;
@@ -556,7 +609,7 @@ bool BG96::close(int id)
     uint32_t recv_amount=0;
     void * data = NULL;
 
-    _parser.setTimeout(BG96_MISC_TIMEOUT);
+    _parser.setTimeout(BG96_SOCKQ_TIMEOUT*2);
     _parser.flush();
     /* socket flush */
     if(!(_parser.send("AT+QIRD=%d,1000\r", id) //send a query (will be required for secure sockets)
