@@ -407,18 +407,7 @@ void BG96Interface::debug(const char * string)
 */
 int BG96Interface::setsockopt(void *handle, int level, int optname, const void *optval, unsigned optlen)
 {
-//    struct BG96_socket *socket = (struct BG96_socket *)handle;      
-    
-    switch (optname) {
-            case NSAPI_REUSEADDR: /*!< Allow bind to reuse local addresses */
-            case NSAPI_KEEPALIVE: /*!< Enables sending of keepalive messages */
-            case NSAPI_LINGER:    /*!< Keeps close from returning until queues empty */
-            case NSAPI_SNDBUF:    /*!< Sets send buffer size */
-            case NSAPI_RCVBUF:    /*!< Sets recv buffer size */               
-      default:
-           printf("BG96SAInterface::setsockopt> ERROR!!!! Unknown optname: %d \r\n", optname);
-           return -1;        
-    }
+	//TODO to be implemented as needed
     return NSAPI_ERROR_UNSUPPORTED;
 }
     
@@ -434,6 +423,7 @@ int BG96Interface::setsockopt(void *handle, int level, int optname, const void *
 */
 int BG96Interface::getsockopt(void *handle, int level, int optname, void *optval, unsigned *optlen)    
 {
+	//TODO to be implemented as needed
     return NSAPI_ERROR_UNSUPPORTED;
 }    
 

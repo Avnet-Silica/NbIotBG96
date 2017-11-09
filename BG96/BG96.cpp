@@ -19,7 +19,10 @@
 
 //device id settings
 #define ID_ON_FLASH		0
+
+#if ID_ON_FLASH	
 const uint8_t DEVICE_ID[6] = {0x00,0x0b,0x57,0x55,0xdb,0x45};
+#endif
 
 //debug messages enable 
 #define DBG_MSG				0
@@ -526,7 +529,9 @@ int32_t BG96::recv(int id, void *data, uint32_t amount)
 {
     uint32_t recv_amount=0;
 		uint32_t now_time;
+		#if DBG_MSG
 		uint8_t* dt = (uint8_t*)data;
+		#endif
 
 		//received data pending??
     if (local_amount > 0) {
