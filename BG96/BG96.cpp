@@ -21,7 +21,7 @@
 #define ID_ON_FLASH		0
 
 #if ID_ON_FLASH	
-const uint8_t DEVICE_ID[6] = {0x00,0x0b,0x57,0x55,0xdb,0x45};
+const uint8_t DEVICE_ID[6] = {0x00,0x80,0xe1,0xb7,0xd3,0x47};
 #endif
 
 //debug messages enable 
@@ -67,8 +67,8 @@ static void delay_ms(uint32_t del)
 
 bool BG96::startup(int mode)
 {
-    Timer timer_s;
-		uint32_t time;
+    //Timer timer_s;
+		//uint32_t time;
     _parser.setTimeout(BG96_MISC_TIMEOUT);
     /*Test module before reset*/
     waitBG96Ready();
@@ -106,23 +106,8 @@ bool BG96::startup(int mode)
             break;
           }
     }
-		
-		//activate PDP context 1 ...
-		_parser.send("AT+QIACT=1");
-		timer_s.start();
-		while (1)
-		{
-			if (_parser.recv("OK"))
-				break;
-			time = timer_s.read_ms();
-			if (time > BG96_CONNECT_TIMEOUT) 
-			{
-				pc.printf("ERROR --->>> no network found, resetting...\r\n");
-				return false;		
-			}
-		}		
 
-	#if 0
+	#if 0	
     _parser.send("AT+QIACT?");
     while (1) {
         if (_parser.recv("OK"))
@@ -199,6 +184,12 @@ bool BG96::connect(const char *apn, const char *username, const char *password)
 {
 			int i = 0;
 			char* search_pt;
+
+	    Timer timer_s;
+			uint32_t time;
+	
+			int pdp_retry = 0;
+	
 			memset(pdp_string, 0, sizeof(pdp_string));
 			pc.printf("Checking APN ...\r\n");
 			_parser.send("AT+QICSGP=1");
@@ -231,6 +222,38 @@ bool BG96::connect(const char *apn, const char *username, const char *password)
 					}
 		}
 		pc.printf("End APN check\r\n\n");
+		
+		//activate PDP context 1 ...
+		pc.printf("PDP activating ...\r\n");
+		int a = 1;
+		while(a==1)
+		{
+				_parser.send("AT+QIACT=1");
+				timer_s.reset();
+				timer_s.start();
+				while (1)
+				{
+					if (_parser.recv("OK")){
+						a=0;
+						break;
+					}
+						
+					time = timer_s.read_ms();
+					uint32_t end_time = (BG96_MISC_TIMEOUT*(5+(pdp_retry*3)));
+					if (time > end_time) 
+					{
+						pdp_retry++;
+						if (pdp_retry > 3)
+							{
+								pc.printf("ERROR --->>> PDP not valid, program stoppped!!\r\n");
+								pc.printf("***********************************************");
+								while (1);
+							}
+						break;
+					}
+				}		
+		}
+		pc.printf("PDP started\r\n\n");
     return true;
 }
 
