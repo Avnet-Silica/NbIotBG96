@@ -15,6 +15,8 @@
 #define NVM_CONFIG 				0x04
 #define PAGE_WRITE 				0x01
 
+#define ERASE_REGISTER		0xE3
+
 //////////////////////////////////////////////////
 // Store nvmData in ascii format
 //////////////////////////////////////////////////
@@ -113,7 +115,13 @@ bool SLG46824::hw_set(void)
 	
 	char *ptr;
 	
-	addr = (slg_device_i2c_address | NVM_CONFIG);
+	//SLG46824 already programmed, exit. If user would to try to reprogram, 
+	//must comment the two source code lines here below
+	if (slg_device_i2c_address != 0x10)
+		return false;		
+	
+	//addr = (slg_device_i2c_address | NVM_CONFIG);
+	
   // Store each byte value into data_array[][]
 	for (i = 0; i < 16; i++)
 		{
@@ -128,22 +136,42 @@ bool SLG46824::hw_set(void)
 				data_array[i][j] = (uint8_t)HexVal;
 			}
 		}
-  pc.printf("\r\nprogramming SLG device, wait...");	
+		
+  pc.printf("\r\nConfiguring SLG device, wait...");	
 
-	//program NVM ...
-	for (i = 0; i < 16; i++) 
+	#if 0		//use erase only if you nedd to reprogram device
+	//slg46824 erase: the pages erase addresses are on REGISTER area (block 0); please make erase NOT in raw mode but sequentially as sample here below
+	pc.printf("\r\nerasing SLG device, wait...");	
+	addr = (slg_device_i2c_address);
+	for (i = 0; i < 14; i++) 	//address over 0xE0 do not erase (0xE0 protection page, 0xF0 service page)
 	{
+			//erase page
+			aTxBuffer[0] = ERASE_REGISTER;
+			aTxBuffer[1] = (i | 0x80);
+			result = _slg_i2c.write(addr, (char *)aTxBuffer, (2), false); 
+			delay_ms(50);
+			if(result != HAL_OK)
+					i2c_err++;		
+	}
+	#endif
+
+	//slg46824 programming
+  pc.printf("\r\nProgramming SLG device, wait...");	
+		//addr = (slg_device_i2c_address);
+	addr = (slg_device_i2c_address | NVM_CONFIG);
+	for (i = 0; i < 14; i++) 	//address over 0xE0 not programmed (see isp_guide_slg46824_26_rev.0.1.pdf, figure 3 page 5)
+	{	
+			//write page
+		 	memcpy(&aTxBuffer[1], data_array[i], 16);		
 			aTxBuffer[0] = (i<<4);
-			memcpy(&aTxBuffer[1], data_array[i], 16);
-			//result = _slg_i2c.write((int)(slg_device_i2c_address | NVM_CONFIG), (char *)aTxBuffer, (16+1), false); 
-			result = _slg_i2c.write(addr, (char *)aTxBuffer, (16+1), false); 
+			result |= _slg_i2c.write(addr, (char *)aTxBuffer, (16+1), false); 
+			delay_ms(50);
 			if(result != HAL_OK)
 					i2c_err++;
-			delay_ms(100);
-			//result = _slg_i2c.write((int)(slg_device_i2c_address | 0), (char *)aTxBuffer, (1), true); 
-			//result |= _slg_i2c.read((int)(slg_device_i2c_address | 0), (char *)aRxBuffer, (16)); 
 	}
+
 	pc.printf("\r\nSLG programmed, now starting application\r\n\n");	
+
 	return true;
 }
 
@@ -155,15 +183,16 @@ bool SLG46824::getI2CAddress(uint8_t *addr)
 		
 		for (i=0; i<16; i++)
 		{
-			res = _slg_i2c.read((i<<3), &dummy, 1);  // select the register, no I2C Stop
+			res = _slg_i2c.read((i<<4), &dummy, 1);  // select the register, no I2C Stop
 			if (res == 0)
 			{
 				*addr = i;
-				slg_device_i2c_address = (i<<3);
+				slg_device_i2c_address = (i<<4);
+				wait_ms(50);
 				return true;
 			}
 			//i2c.read(addr, readdata, 8);        // read the length byte and the 7 databytes
-			wait_ms(10);
+			wait_ms(50);
 		}
 
     return false;
@@ -171,11 +200,11 @@ bool SLG46824::getI2CAddress(uint8_t *addr)
 
 void SLG46824::test_task(void)
 {
-	
+	/*
 	int result;
   while (1)
   {
-			delay_ms(800);
+			delay_ms(100);
 			aTxBuffer[0] = 0x7a;
 			aTxBuffer[1] = 0xff;
 			result = _slg_i2c.write((int)(slg_device_i2c_address| REGISTER_CONFIG), (char *)aTxBuffer, (2), false); 
@@ -190,6 +219,7 @@ void SLG46824::test_task(void)
 					i2c_err++;
 
   }
+	*/
 
 }
 
